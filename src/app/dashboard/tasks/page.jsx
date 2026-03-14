@@ -1,16 +1,26 @@
-import React from 'react';
-import Link from 'next/link';
-import { Plus, Search, Filter, MoreVertical, Calendar, Clock, CheckCircle, AlertCircle, User, Tag, Flag } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreVertical,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  User,
+  Tag,
+  Flag,
+  Phone,
+  Mail,
+  Users,
+  FileText,
+} from "lucide-react";
+import { getTasks } from "@/app/action/server/tasksActions";
 
-const page = () => {
-  const tasks = [
-    { id: 1, title: 'Call with Acme Corporation', priority: 'High', status: 'In Progress', dueDate: '2024-03-15', assignee: 'John Doe', category: 'Call' },
-    { id: 2, title: 'Prepare proposal for TechStart', priority: 'High', status: 'Not Started', dueDate: '2024-03-16', assignee: 'Sarah Smith', category: 'Document' },
-    { id: 3, title: 'Follow up with Global Solutions', priority: 'Medium', status: 'In Progress', dueDate: '2024-03-14', assignee: 'Mike Johnson', category: 'Email' },
-    { id: 4, title: 'Review lead qualification criteria', priority: 'Low', status: 'Completed', dueDate: '2024-03-13', assignee: 'John Doe', category: 'Review' },
-    { id: 5, title: 'Team meeting - weekly sync', priority: 'Medium', status: 'In Progress', dueDate: '2024-03-15', assignee: 'Sarah Smith', category: 'Meeting' },
-    { id: 6, title: 'Update CRM records', priority: 'Low', status: 'Not Started', dueDate: '2024-03-17', assignee: 'Mike Johnson', category: 'Admin' },
-  ];
+const page = async () => {
+  const tasks = await getTasks();
 
   const getPriorityColor = (priority) => {
     switch(priority) {
@@ -49,8 +59,8 @@ const page = () => {
           <p className="text-sm text-gray-500 mt-1">Manage and track your daily tasks</p>
         </div>
         <Link
-          href="/tasks/create"
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          href="/dashboard/tasks/create"
+          className="flex items-center px-4 py-2 bg-[#F97316] text-white rounded-lg hover:bg-[#EA580C] transition-colors"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Task

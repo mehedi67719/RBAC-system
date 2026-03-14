@@ -1,15 +1,23 @@
-import React from 'react';
-import Link from 'next/link';
-import { Plus, Search, Filter, MoreVertical, Mail, Phone, Calendar, Star, TrendingUp, Users, CheckCircle, Clock } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreVertical,
+  Mail,
+  Phone,
+  Calendar,
+  Star,
+  TrendingUp,
+  Users,
+  CheckCircle,
+  Clock,
+} from "lucide-react";
+import { getLeads } from "@/app/action/server/leadsActions";
 
-const page = () => {
-  const leads = [
-    { id: 1, name: 'Acme Corporation', contact: 'John Smith', email: 'john@acme.com', phone: '+1 (555) 123-4567', status: 'Hot', value: '$50,000', stage: 'Negotiation', date: '2024-03-15' },
-    { id: 2, name: 'TechStart Inc', contact: 'Sarah Johnson', email: 'sarah@techstart.com', phone: '+1 (555) 234-5678', status: 'Warm', value: '$25,000', stage: 'Proposal', date: '2024-03-14' },
-    { id: 3, name: 'Global Solutions', contact: 'Mike Wilson', email: 'mike@globalsol.com', phone: '+1 (555) 345-6789', status: 'Cold', value: '$10,000', stage: 'Initial Contact', date: '2024-03-13' },
-    { id: 4, name: 'Innovation Labs', contact: 'Emily Brown', email: 'emily@innolabs.com', phone: '+1 (555) 456-7890', status: 'Hot', value: '$75,000', stage: 'Closing', date: '2024-03-12' },
-    { id: 5, name: 'Digital Dynamics', contact: 'David Lee', email: 'david@digitaldyn.com', phone: '+1 (555) 567-8901', status: 'Warm', value: '$35,000', stage: 'Discovery', date: '2024-03-11' },
-  ];
+const page = async () => {
+  const leads = await getLeads();
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -40,8 +48,8 @@ const page = () => {
           <p className="text-sm text-gray-500 mt-1">Manage and track your sales leads</p>
         </div>
         <Link
-          href="/leads/create"
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          href="/dashboard/leads/create"
+          className="flex items-center px-4 py-2 bg-[#F97316] text-white rounded-lg hover:bg-[#EA580C] transition-colors"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Lead

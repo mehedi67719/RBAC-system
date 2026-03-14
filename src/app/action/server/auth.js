@@ -56,9 +56,6 @@ export const loginUser = async (payload) => {
 
     const usercollection = await dbconnection("users");
 
-    console.log(usercollection)
-
-   
     const user = await usercollection.findOne({ email: email });
 
     if (!user) {
