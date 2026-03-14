@@ -32,13 +32,16 @@ export const getUsers = async () => {
   }
 };
 
-// Server Action for UPDATE
+
+
+
+
 export const updateUser = async (id, updateData) => {
   try {
     console.log("Updating user with ID:", id);
     console.log("Update data:", updateData);
 
-    // ID টি স্ট্রিং হিসেবে আসবে, তাই ObjectId তৈরি করুন
+
     let objectId;
     try {
       objectId = new ObjectId(id);
@@ -49,7 +52,7 @@ export const updateUser = async (id, updateData) => {
 
     const col = await dbconnection("users");
 
-    // প্রথমে ইউজার আছে কিনা চেক করুন
+  
     const existingUser = await col.findOne({ _id: objectId });
     if (!existingUser) {
       console.log("User not found with ID:", id);
@@ -74,7 +77,7 @@ export const updateUser = async (id, updateData) => {
       return { success: false, message: "User not found" };
     }
 
-    // আপডেট করা ইউজার ফেচ করুন
+
     const updatedUser = await col.findOne(
       { _id: objectId },
       { projection: { password: 0 } }
@@ -99,12 +102,15 @@ export const updateUser = async (id, updateData) => {
   }
 };
 
-// Server Action for DELETE
+
+
+
+
 export const deleteUser = async (id) => {
   try {
     console.log("Deleting user with ID:", id);
 
-    // ID টি স্ট্রিং হিসেবে আসবে, তাই ObjectId তৈরি করুন
+   
     let objectId;
     try {
       objectId = new ObjectId(id);
@@ -115,7 +121,7 @@ export const deleteUser = async (id) => {
 
     const col = await dbconnection("users");
 
-    // প্রথমে ইউজার আছে কিনা চেক করুন
+   
     const user = await col.findOne({ _id: objectId });
     if (!user) {
       console.log("User not found with ID:", id);
@@ -144,6 +150,10 @@ export const deleteUser = async (id) => {
   }
 };
 
+
+
+
+
 export const createUser = async (formData, actor) => {
   try {
     const name = formData.get("name")?.toString().trim();
@@ -164,7 +174,7 @@ export const createUser = async (formData, actor) => {
       return { success: false, message: "User with this email already exists." };
     }
 
-    // Split name into first and last
+  
     const nameParts = name.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
@@ -176,7 +186,7 @@ export const createUser = async (formData, actor) => {
       email,
       phone,
       username,
-      password, // Note: Hash this password in production
+      password, 
       role,
       permissions: getDefaultPermissions(role),
       status: "Active",
@@ -187,7 +197,7 @@ export const createUser = async (formData, actor) => {
 
     const result = await col.insertOne(doc);
 
-    // Log audit (optional)
+    
     try {
       await logAudit({
         actorId: actor?.id || null,
@@ -211,6 +221,11 @@ export const createUser = async (formData, actor) => {
     return { success: false, message: "Failed to create user" };
   }
 };
+
+
+
+
+
 
 function getDefaultPermissions(role) {
   switch(role) {

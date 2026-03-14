@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 import {
   ArrowLeft,
   Save,
@@ -16,15 +18,175 @@ import { useSession } from "next-auth/react";
 import { createUser } from "@/app/action/server/usersActions";
 
 const Page = () => {
+  const router = useRouter();
   const { data: session } = useSession();
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    role: "agent",
+    status: "Active",
+    emailVerified: false
+  });
 
-  const handleCreateUser = async (formData) => {
-    const res = await createUser(formData, {
-      id: session?.user?.id,
-      email: session?.user?.email,
-    });
-    setMessage(res.ok ? "User created successfully" : res.message);
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const validateForm = () => {
+    if (!formData.firstName.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'First name is required',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    if (!formData.lastName.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Last name is required',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    if (!formData.email.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Email is required',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Please enter a valid email address',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    if (!formData.password) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Password is required',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Password must be at least 6 characters long',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Passwords do not match',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    if (formData.phone && !/^[0-9+\-\s()]+$/.test(formData.phone)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Please enter a valid phone number',
+        confirmButtonColor: '#F97316'
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Create FormData object
+      const formDataObj = new FormData();
+      formDataObj.append("name", `${formData.firstName} ${formData.lastName}`.trim());
+      formDataObj.append("firstName", formData.firstName);
+      formDataObj.append("lastName", formData.lastName);
+      formDataObj.append("email", formData.email);
+      formDataObj.append("phone", formData.phone);
+      formDataObj.append("username", formData.username || formData.email.split('@')[0]);
+      formDataObj.append("password", formData.password);
+      formDataObj.append("role", formData.role);
+      formDataObj.append("status", formData.status);
+      formDataObj.append("emailVerified", formData.emailVerified.toString());
+
+      const result = await createUser(formDataObj, {
+        id: session?.user?.id,
+        email: session?.user?.email,
+      });
+
+      console.log("Create user result:", result);
+
+      if (result.success) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: result.message || 'User created successfully',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        // Redirect to users list
+        router.push('/dashboard/users');
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: result.message || 'Failed to create user',
+          confirmButtonColor: '#F97316'
+        });
+      }
+    } catch (error) {
+      console.error("Error creating user:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'An unexpected error occurred',
+        confirmButtonColor: '#F97316'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,17 +208,18 @@ const Page = () => {
         <button
           type="submit"
           form="create-user-form"
-          className="flex items-center px-4 py-2 bg-[#F97316] text-white rounded-lg hover:bg-[#EA580C] transition-colors"
+          disabled={loading}
+          className="flex items-center px-4 py-2 bg-[#F97316] text-white rounded-lg hover:bg-[#EA580C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-4 h-4 mr-2" />
-          Save User
+          {loading ? 'Saving...' : 'Save User'}
         </button>
       </div>
 
       {/* Main Form */}
       <form
         id="create-user-form"
-        action={handleCreateUser}
+        onSubmit={handleSubmit}
         className="grid grid-cols-1 lg:grid-cols-3 gap-6"
       >
         {/* Left Column - Basic Information */}
@@ -68,39 +231,48 @@ const Page = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
+                    First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     name="firstName"
                     type="text"
+                    value={formData.firstName}
+                    onChange={handleChange}
                     placeholder="Enter first name"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
+                    Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     name="lastName"
                     type="text"
+                    value={formData.lastName}
+                    onChange={handleChange}
                     placeholder="Enter last name"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
+                    required
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
+                  Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     name="email"
                     type="email"
+                    value={formData.email}
+                    onChange={handleChange}
                     placeholder="user@example.com"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
+                    required
                   />
                 </div>
               </div>
@@ -114,8 +286,10 @@ const Page = () => {
                   <input
                     name="phone"
                     type="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
                     placeholder="+1 (555) 000-0000"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -135,8 +309,10 @@ const Page = () => {
                   <input
                     name="username"
                     type="text"
+                    value={formData.username}
+                    onChange={handleChange}
                     placeholder="Enter username"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -144,29 +320,35 @@ const Page = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password
+                    Password <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       name="password"
                       type="password"
+                      value={formData.password}
+                      onChange={handleChange}
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
+                      required
                     />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm Password
+                    Confirm Password <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       name="confirmPassword"
                       type="password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
+                      required
                     />
                   </div>
                 </div>
@@ -174,7 +356,7 @@ const Page = () => {
 
               <div className="flex items-start space-x-2 text-sm text-gray-500">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <p>Password must be at least 8 characters long and include a number and a special character</p>
+                <p>Password must be at least 6 characters long</p>
               </div>
             </div>
           </div>
@@ -187,28 +369,56 @@ const Page = () => {
             <h2 className="text-lg font-semibold text-gray-800 mb-4">User Role</h2>
             <div className="space-y-3">
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="role" value="admin" className="w-4 h-4 text-blue-600" />
+                <input 
+                  type="radio" 
+                  name="role" 
+                  value="admin" 
+                  checked={formData.role === 'admin'}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-[#F97316]" 
+                />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-900">Admin</p>
                   <p className="text-xs text-gray-500">Full system access with all permissions</p>
                 </div>
               </label>
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="role" value="manager" className="w-4 h-4 text-blue-600" />
+                <input 
+                  type="radio" 
+                  name="role" 
+                  value="manager" 
+                  checked={formData.role === 'manager'}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-[#F97316]" 
+                />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-900">Manager</p>
                   <p className="text-xs text-gray-500">Can manage team and assign permissions</p>
                 </div>
               </label>
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="role" value="agent" className="w-4 h-4 text-blue-600" />
+                <input 
+                  type="radio" 
+                  name="role" 
+                  value="agent" 
+                  checked={formData.role === 'agent'}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-[#F97316]" 
+                />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-900">Agent</p>
                   <p className="text-xs text-gray-500">Can work on leads and tasks</p>
                 </div>
               </label>
               <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="role" value="customer" className="w-4 h-4 text-blue-600" />
+                <input 
+                  type="radio" 
+                  name="role" 
+                  value="customer" 
+                  checked={formData.role === 'customer'}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-[#F97316]" 
+                />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-900">Customer</p>
                   <p className="text-xs text-gray-500">Limited access to own portal only</p>
@@ -225,7 +435,12 @@ const Page = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Status
                 </label>
-                <select name="status" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select 
+                  name="status" 
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
+                >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                   <option value="Suspended">Suspended</option>
@@ -237,7 +452,13 @@ const Page = () => {
                   Email Verification
                 </label>
                 <div className="flex items-center space-x-2">
-                  <input type="checkbox" name="emailVerified" className="w-4 h-4 text-blue-600 rounded" />
+                  <input 
+                    type="checkbox" 
+                    name="emailVerified" 
+                    checked={formData.emailVerified}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-[#F97316] rounded" 
+                  />
                   <span className="text-sm text-gray-600">Mark as verified</span>
                 </div>
               </div>
@@ -251,18 +472,13 @@ const Page = () => {
               <div>
                 <h3 className="text-sm font-semibold text-blue-900">Permission Tips</h3>
                 <p className="text-xs text-blue-700 mt-1">
-                  Users will only see pages and features based on their assigned permissions. You can customize individual permissions after creation.
+                  Users will only see pages and features based on their assigned role. You can customize individual permissions after creation.
                 </p>
               </div>
             </div>
           </div>
         </div>
       </form>
-      {message && (
-        <p className="mt-4 text-sm text-gray-700">
-          {message}
-        </p>
-      )}
     </div>
   );
 };

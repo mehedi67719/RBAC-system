@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Swal from "sweetalert2";
 import {
   ArrowLeft,
   Save,
@@ -11,115 +13,119 @@ import {
   Phone,
   DollarSign,
   Calendar,
-  Tag,
-  FileText,
-  AlertCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { createLead } from "@/app/action/server/leadsActions";
 
 const Page = () => {
+  const router = useRouter();
   const { data: session } = useSession();
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleCreateLead = async (formData) => {
-    const res = await createLead(formData, {
-      id: session?.user?.id,
-      email: session?.user?.email,
-    });
-    setMessage(res.ok ? "Lead created successfully" : res.message);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.target);
+
+    try {
+      const result = await createLead(formData, {
+        id: session?.user?.id,
+        email: session?.user?.email,
+      });
+
+      if (result.success) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Lead created successfully',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        router.push('/dashboard/leads');
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: result.message,
+          confirmButtonColor: '#F97316'
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Something went wrong',
+        confirmButtonColor: '#F97316'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="p-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Link
-            href="/dashboard/leads"
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-800">Create New Lead</h1>
-            <p className="text-sm text-gray-500 mt-1">Add a new lead to your sales pipeline</p>
-          </div>
-        </div>
-        <button
-          type="submit"
-          form="create-lead-form"
-          className="flex items-center px-4 py-2 bg-[#F97316] text-white rounded-lg hover:bg-[#EA580C] transition-colors"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Save Lead
-        </button>
-      </div>
-
-      {/* Main Form */}
-      <form
-        id="create-lead-form"
-        action={handleCreateLead}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-      >
-        {/* Left Column - Main Information */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Company Information Card */}
-          <div className="bg-white rounded-lg border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Company Information</h2>
-            <div className="space-y-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Full Width */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 w-full">
+        <div className="px-6 py-4 w-full">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/dashboard/leads"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </Link>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Company Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    name="companyName"
-                    type="text"
-                    placeholder="e.g., Acme Corporation"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Industry
-                </label>
-                <select name="industry" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="">Select industry</option>
-                  <option value="technology">Technology</option>
-                  <option value="healthcare">Healthcare</option>
-                  <option value="finance">Finance</option>
-                  <option value="retail">Retail</option>
-                  <option value="manufacturing">Manufacturing</option>
-                  <option value="consulting">Consulting</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Website
-                </label>
-                <input
-                  name="website"
-                  type="url"
-                  placeholder="https://example.com"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <h1 className="text-2xl font-bold text-gray-800">Create New Lead</h1>
+                <p className="text-sm text-gray-500">Add a new lead to your pipeline</p>
               </div>
             </div>
+            <button
+              type="submit"
+              form="lead-form"
+              disabled={loading}
+              className="flex items-center px-6 py-2.5 bg-[#F97316] text-white rounded-lg hover:bg-[#EA580C] transition-colors disabled:opacity-50"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? 'Creating...' : 'Create Lead'}
+            </button>
           </div>
+        </div>
+      </div>
 
-          {/* Contact Information Card */}
-          <div className="bg-white rounded-lg border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+      {/* Main Content - Full Width */}
+      <div className="p-6 w-full">
+        <form id="lead-form" onSubmit={handleSubmit} className="w-full">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full">
+            {/* Form Header */}
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 rounded-t-xl">
+              <h2 className="text-lg font-semibold text-gray-800">Lead Information</h2>
+            </div>
+
+            {/* Form Body */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Company Name */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Company Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      name="companyName"
+                      type="text"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                      placeholder="ABC Corp"
+                    />
+                  </div>
+                </div>
+
+                {/* First Name */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
                     First Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -127,200 +133,162 @@ const Page = () => {
                     <input
                       name="firstName"
                       type="text"
-                      placeholder="John"
-                      className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                      placeholder="Mehedi"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+
+                {/* Last Name */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
                     Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     name="lastName"
                     type="text"
-                    placeholder="Doe"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                    placeholder="Hassan"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="john.doe@example.com"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                {/* Email */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                      placeholder="mehedi@abc.com"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    name="phone"
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                {/* Phone */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Phone
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      name="phone"
+                      type="tel"
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                      placeholder="+1 234 567 8900"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Job Title
-                </label>
-                <input
-                  name="jobTitle"
-                  type="text"
-                  placeholder="e.g., CEO, Marketing Manager"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Lead Details */}
-        <div className="space-y-6">
-          {/* Lead Status Card */}
-          <div className="bg-white rounded-lg border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Lead Details</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lead Status
-                </label>
-                <select name="status" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="Hot">Hot</option>
-                  <option value="Warm">Warm</option>
-                  <option value="Cold">Cold</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lead Stage
-                </label>
-                <select name="stage" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="Initial Contact">Initial Contact</option>
-                  <option value="Discovery">Discovery</option>
-                  <option value="Proposal">Proposal</option>
-                  <option value="Negotiation">Negotiation</option>
-                  <option value="Closing">Closing</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lead Value
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    name="value"
-                    type="number"
-                    placeholder="50000"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Expected Close Date
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    name="expectedCloseDate"
-                    type="date"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lead Source
-                </label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select name="source" className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Select source</option>
-                    <option value="website">Website</option>
-                    <option value="referral">Referral</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="campaign">Marketing Campaign</option>
-                    <option value="event">Event/Conference</option>
-                    <option value="other">Other</option>
+                {/* Status */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                  >
+                    <option value="Hot">Hot</option>
+                    <option value="Warm">Warm</option>
+                    <option value="Cold">Cold</option>
                   </select>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Additional Information Card */}
-          <div className="bg-white rounded-lg border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Additional Information</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Assigned To
-                </label>
-                <select name="assignedTo" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="">Select agent</option>
-                  <option value="john">John Doe</option>
-                  <option value="sarah">Sarah Smith</option>
-                  <option value="mike">Mike Johnson</option>
-                </select>
+                {/* Value */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Lead Value ($)
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      name="value"
+                      type="number"
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                      placeholder="15000"
+                    />
+                  </div>
+                </div>
+
+                {/* Stage */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Stage
+                  </label>
+                  <select
+                    name="stage"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                  >
+                    <option value="Initial Contact">Initial Contact</option>
+                    <option value="Discovery">Discovery</option>
+                    <option value="Proposal">Proposal</option>
+                    <option value="Negotiation">Negotiation</option>
+                    <option value="Closing">Closing</option>
+                  </select>
+                </div>
+
+                {/* Expected Close Date */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Expected Close Date
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      name="expectedCloseDate"
+                      type="date"
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F97316] focus:border-transparent bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <textarea
-                    name="notes"
-                    rows="4"
-                    placeholder="Add any additional notes about this lead..."
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  ></textarea>
+              {/* Preview of your data */}
+              <div className="mt-8 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <h3 className="text-sm font-medium text-orange-800 mb-3">Sample Data Format:</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-orange-600">Company:</span>
+                    <span className="ml-1 text-gray-700">ABC Corp</span>
+                  </div>
+                  <div>
+                    <span className="text-orange-600">Contact:</span>
+                    <span className="ml-1 text-gray-700">Mehedi Hassan</span>
+                  </div>
+                  <div>
+                    <span className="text-orange-600">Email:</span>
+                    <span className="ml-1 text-gray-700">mehedi@abc.com</span>
+                  </div>
+                  <div>
+                    <span className="text-orange-600">Status:</span>
+                    <span className="ml-1 text-red-600">Hot</span>
+                  </div>
+                  <div>
+                    <span className="text-orange-600">Value:</span>
+                    <span className="ml-1 text-gray-700">$15,000</span>
+                  </div>
+                  <div>
+                    <span className="text-orange-600">Stage:</span>
+                    <span className="ml-1 text-gray-700">Initial Contact</span>
+                  </div>
+                  <div>
+                    <span className="text-orange-600">Date:</span>
+                    <span className="ml-1 text-gray-700">2026-03-10</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Tips Card */}
-          <div className="bg-blue-50 rounded-lg border border-blue-100 p-4">
-            <div className="flex items-start space-x-2">
-              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-semibold text-blue-900">Pro Tip</h3>
-                <p className="text-xs text-blue-700 mt-1">
-                  Adding detailed notes and correct lead source helps your team understand the lead better and improve conversion rates.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </form>
-      {message && (
-        <p className="mt-4 text-sm text-gray-700">
-          {message}
-        </p>
-      )}
+        </form>
+      </div>
     </div>
   );
 };
