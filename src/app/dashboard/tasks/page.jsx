@@ -28,15 +28,11 @@ const Page = () => {
   const [filter, setFilter] = useState("all");
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
 
-  useEffect(() => {
-    console.log("Tasks Page - Session Status:", status);
-    console.log("Tasks Page - Session Data:", session);
-  }, [session, status]);
-
   const currentUserPermissions = session?.user?.permissions || [];
+  const currentUserRole = session?.user?.role;
   
   const hasPermission = (permission) => {
-    if (!session?.user) return false;
+    if (currentUserRole === 'admin') return true;
     return currentUserPermissions.includes(permission);
   };
 
@@ -56,7 +52,6 @@ const Page = () => {
       const data = await getTasks();
       setTasks(data || []);
     } catch (error) {
-      console.error("Fetch tasks error:", error);
       Swal.fire({ icon: "error", title: "Error", text: "Failed to load tasks" });
     } finally {
       setLoading(false);
@@ -87,7 +82,6 @@ const Page = () => {
         setTasks(prev => prev.filter(task => task._id !== taskId));
         Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Task deleted successfully', timer: 2000, showConfirmButton: false });
       } catch (error) {
-        console.error("Delete error:", error);
         Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Failed to delete task', confirmButtonColor: '#F97316' });
         fetchTasks();
       } finally {
@@ -109,8 +103,8 @@ const Page = () => {
       const result = await updateTask(taskId, { status: newStatus });
       if (!result.success) throw new Error(result.message);
       setTasks(prev => prev.map(task => task._id === taskId ? { ...task, status: newStatus } : task));
+      Swal.fire({ icon: 'success', title: 'Success', text: `Task marked as ${newStatus}`, timer: 2000, showConfirmButton: false });
     } catch (error) {
-      console.error("Status update error:", error);
       Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Failed to update task status', confirmButtonColor: '#F97316' });
     } finally {
       setUpdatingTaskId(null);
@@ -118,15 +112,15 @@ const Page = () => {
   };
 
   const handleView = (taskId) => {
-    if (hasPermission("tasks.view")) {
-      router.push(`/dashboard/tasks/${taskId}`);
-    }
+    router.push(`/dashboard/tasks/${taskId}`);
   };
 
   const handleEdit = (taskId) => {
-    if (hasPermission("tasks.edit")) {
-      router.push(`/dashboard/tasks/${taskId}/edit`);
+    if (!hasPermission("tasks.edit")) {
+      Swal.fire({ icon: 'error', title: 'Access Denied', text: 'You do not have permission to edit tasks', confirmButtonColor: '#F97316' });
+      return;
     }
+    router.push(`/dashboard/tasks/${taskId}/edit`);
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -263,15 +257,13 @@ const Page = () => {
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                    {hasPermission("tasks.view") && (
-                      <button
-                        onClick={() => handleView(task._id)}
-                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600"
-                        title="View Task"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleView(task._id)}
+                      className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600"
+                      title="View Task"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                     
                     {hasPermission("tasks.edit") && (
                       <>
