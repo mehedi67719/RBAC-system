@@ -17,7 +17,8 @@ import {
   FileText,
   Clock
 } from 'lucide-react';
-import { getReports } from '@/app/action/server/reportsActions';
+import { getReports } from '@/app/action/server/reportActions';
+
 
 const Page = async () => {
   const reports = await getReports();
